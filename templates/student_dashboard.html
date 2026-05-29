@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JunoVision — Student Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        :root {
+            --bg: #080c14;
+            --surface: #0d1320;
+            --card: rgba(17, 25, 39, 0.7);
+            --border: rgba(99, 179, 255, 0.15);
+            --accent: #3b82f6;
+            --accent2: #06d6a0;
+            --text: #e8f0ff;
+            --muted: #6b7a99;
+            --danger: #f43f5e;
+            --white: #ffffff;
+        }
+
+        :root[data-theme="light"] {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --card: rgba(255, 255, 255, 0.8);
+            --border: rgba(59, 130, 246, 0.2);
+            --accent: #2563eb;
+            --accent2: #059669;
+            --text: #0f172a;
+            --muted: #64748b;
+            --white: #0f172a;
+        }
+
+        :root[data-theme="light"] body::before {
+            background-image: linear-gradient(rgba(5, 150, 105, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(5, 150, 105, 0.08) 1px, transparent 1px);
+        }
+
+        :root[data-theme="light"] #bg-canvas {
+            opacity: 0.3; filter: invert(1);
+        }
+        
+        :root[data-theme="light"] nav {
+            background: rgba(255, 255, 255, 0.7);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        :root[data-theme="light"] .nav-logo { color: var(--text); }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background-image:
+                linear-gradient(rgba(6, 214, 160, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(6, 214, 160, 0.04) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none; z-index: 0;
+        }
+
+        #bg-canvas {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;
+        }
+
+        #mouse-orb {
+            position: fixed; width: 400px; height: 400px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 60%);
+            pointer-events: none; z-index: 99; transform: translate(-50%, -50%);
+            mix-blend-mode: screen; will-change: left, top;
+        }
+
+        :root[data-theme="light"] #mouse-orb {
+            mix-blend-mode: multiply; background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 60%);
+        }
+
+        .glow-orb {
+            position: fixed; top: 20%; left: 30%;
+            width: 600px; height: 600px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(6, 214, 160, 0.1) 0%, transparent 60%);
+            filter: blur(40px); pointer-events: none; z-index: 0;
+            animation: float 10s ease-in-out infinite alternate;
+        }
+
+        :root[data-theme="light"] .glow-orb {
+            background: radial-gradient(circle, rgba(5, 150, 105, 0.15) 0%, transparent 60%);
+        }
+
+        .theme-btn {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
+            color: var(--text); width: 36px; height: 36px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.3s ease; margin-right: 12px;
+        }
+        .theme-btn:hover { background: rgba(255, 255, 255, 0.1); transform: scale(1.1); }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(50px, 50px) scale(1.1); }
+        }
+
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 18px 48px; background: rgba(8, 12, 20, 0.8);
+            backdrop-filter: blur(20px); border-bottom: 1px solid var(--border);
+        }
+
+        .nav-logo {
+            font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.15rem; color: var(--white);
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        .nav-logo .dot {
+            width: 8px; height: 8px; background: var(--accent2);
+            border-radius: 50%; box-shadow: 0 0 12px var(--accent2);
+        }
+
+        .btn-logout {
+            background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.3);
+            color: #fb7185; padding: 8px 16px; border-radius: 8px;
+            text-decoration: none; font-size: 0.8rem; font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-logout:hover { background: rgba(244, 63, 94, 0.2); transform: translateY(-2px); }
+
+        .wrapper {
+            position: relative; z-index: 1; max-width: 1200px; margin: 0 auto;
+            padding: 120px 24px 80px;
+        }
+
+        .profile-header {
+            display: flex; justify-content: space-between; align-items: flex-end;
+            margin-bottom: 40px; animation: slideUp 0.8s ease both;
+        }
+
+        .profile-header h1 {
+            font-family: 'Syne', sans-serif; font-size: 2.5rem; color: var(--white);
+        }
+
+        .profile-header p {
+            color: var(--accent2); font-size: 0.9rem; letter-spacing: 0.1em; text-transform: uppercase;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .avatar-wrapper {
+            position: relative; width: 120px; height: 120px; border-radius: 50%;
+            border: 2px solid var(--accent); box-shadow: 0 0 24px rgba(59, 130, 246, 0.3);
+            overflow: hidden; cursor: pointer; flex-shrink: 0;
+        }
+        .avatar-wrapper img, .avatar-wrapper > div:first-child {
+            width: 100%; height: 100%; object-fit: cover; border: none !important; box-shadow: none !important;
+        }
+        .avatar-overlay {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s ease; color: white; font-size: 0.8rem; font-weight: bold;
+            font-family: 'Syne', sans-serif; text-align: center; pointer-events: none;
+        }
+        .avatar-wrapper:hover .avatar-overlay { opacity: 1; }
+
+        /* ── GRID LAYOUT ── */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 24px;
+        }
+
+        .panel {
+            background: var(--card);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 24px 48px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05) inset;
+            position: relative;
+            overflow: hidden;
+            animation: slideUp 0.8s ease both;
+        }
+
+        .panel:nth-child(2) { animation-delay: 0.1s; }
+        .panel:nth-child(3) { 
+            animation-delay: 0.2s; 
+            grid-column: span 2;
+        }
+
+        .panel-title {
+            font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.2rem;
+            color: var(--white); margin-bottom: 24px; display: flex; align-items: center; gap: 10px;
+        }
+
+        /* ── HOLOGRAPHIC RING ── */
+        .ring-container {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        .progress-ring {
+            position: relative; width: 200px; height: 200px;
+        }
+
+        .progress-ring svg {
+            width: 100%; height: 100%; transform: rotate(-90deg);
+        }
+
+        .progress-ring circle {
+            fill: none; stroke-width: 12; stroke-linecap: round;
+        }
+
+        .ring-bg {
+            stroke: rgba(255,255,255,0.05);
+        }
+
+        .ring-fill {
+            stroke: var(--accent2);
+            stroke-dasharray: 502; /* 2 * pi * r (r=80) */
+            stroke-dashoffset: 502;
+            animation: fillRing 2s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+            filter: drop-shadow(0 0 8px var(--accent2));
+        }
+
+        @keyframes fillRing {
+            to { stroke-dashoffset: calc(502 - (502 * {{ stats.overall_attendance }}) / 100); }
+        }
+
+        .ring-text {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .ring-text h2 {
+            font-family: 'Syne', sans-serif; font-size: 2.5rem; color: var(--white); line-height: 1;
+        }
+
+        .ring-text span {
+            font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em;
+        }
+
+        .stats-row {
+            display: flex; justify-content: space-around; width: 100%; margin-top: 30px;
+            border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;
+        }
+
+        .stat-mini { text-align: center; }
+        .stat-mini h3 { font-size: 1.5rem; color: var(--white); font-family: 'Syne', sans-serif; }
+        .stat-mini p { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; }
+
+        /* ── CHART CONTAINER ── */
+        .chart-container {
+            position: relative; height: 300px; width: 100%; display: flex; justify-content: center;
+        }
+
+        /* ── TERMINAL FEED ── */
+        .feed-list {
+            display: flex; flex-direction: column; gap: 12px;
+        }
+
+        .feed-item {
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);
+            padding: 16px 24px; border-radius: 12px; transition: all 0.3s ease;
+        }
+
+        .feed-item:hover {
+            background: rgba(59, 130, 246, 0.05); border-color: rgba(59, 130, 246, 0.2);
+            transform: translateX(5px);
+        }
+
+        .feed-info { display: flex; align-items: center; gap: 16px; }
+        
+        .feed-date {
+            font-size: 0.8rem; color: var(--muted); background: rgba(0,0,0,0.5);
+            padding: 4px 10px; border-radius: 6px;
+        }
+
+        .feed-subject { font-weight: 600; color: var(--text); }
+
+        .feed-status {
+            font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em;
+            padding: 6px 12px; border-radius: 100px; font-weight: 700;
+        }
+
+        .status-present {
+            background: rgba(6, 214, 160, 0.1); color: var(--accent2); border: 1px solid rgba(6, 214, 160, 0.3);
+        }
+
+        .status-absent {
+            background: rgba(244, 63, 94, 0.1); color: var(--danger); border: 1px solid rgba(244, 63, 94, 0.3);
+        }
+
+        /* ── SLEEK WHATSAPP SIMULATOR ── */
+        .whatsapp-sandbox {
+            display: flex;
+            flex-direction: column;
+            height: 380px;
+            border-radius: 16px;
+            background: rgba(10, 16, 26, 0.45);
+            border: 1px solid rgba(6, 214, 160, 0.15);
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+        }
+
+        .wa-header {
+            background: rgba(18, 27, 43, 0.85);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .wa-user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .wa-avatar {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #128c7e, #075e54);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            box-shadow: 0 0 10px rgba(7, 94, 84, 0.5);
+        }
+
+        .wa-name-status {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .wa-name {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .wa-badge {
+            background: #25d366;
+            color: white;
+            font-size: 0.55rem;
+            padding: 1px 5px;
+            border-radius: 100px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .wa-status {
+            font-size: 0.65rem;
+            color: #25d366;
+            font-weight: 500;
+        }
+
+        .wa-chat-area {
+            flex-grow: 1;
+            background-image: radial-gradient(rgba(37, 211, 102, 0.05) 1px, transparent 1px);
+            background-size: 16px 16px;
+            background-color: rgba(8, 12, 20, 0.6);
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .wa-bubble-wrap {
+            display: flex;
+            width: 100%;
+        }
+
+        .wa-bubble-wrap.received {
+            justify-content: flex-start;
+        }
+
+        .wa-bubble {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            line-height: 1.45;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-family: inherit;
+        }
+
+        .received .wa-bubble {
+            background: rgba(18, 27, 43, 0.95);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-top-left-radius: 4px;
+            color: var(--text);
+        }
+
+        .received .wa-bubble.present-bubble {
+            border-left: 3px solid var(--accent2);
+        }
+
+        .received .wa-bubble.alert-bubble {
+            border-left: 3px solid var(--danger);
+            background: rgba(244, 63, 94, 0.05);
+        }
+
+        .wa-bubble-meta {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 4px;
+            margin-top: 4px;
+            font-size: 0.6rem;
+            color: var(--muted);
+        }
+
+        .wa-ticks {
+            color: #34b7f1;
+            font-weight: bold;
+        }
+
+        .wa-input-area {
+            background: rgba(18, 27, 43, 0.85);
+            border-top: 1px solid var(--border);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .wa-input-mock {
+            flex-grow: 1;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 0.72rem;
+            color: var(--muted);
+            user-select: none;
+        }
+    </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0a0a0f">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+</head>
+<body>
+    <div id="mouse-orb"></div>
+    <canvas id="bg-canvas"></canvas>
+    <div class="glow-orb"></div>
+
+    <nav>
+        <div class="nav-logo">
+            <div class="dot"></div>
+            JunoVision Student
+        </div>
+        <div style="display: flex; align-items: center;">
+            <button id="themeToggle" class="theme-btn">
+                <svg id="sunIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <svg id="moonIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+            </button>
+            <a href="/logout" class="btn-logout">Logout</a>
+        </div>
+    </nav>
+
+    <div class="wrapper">
+        <div class="profile-header">
+            <div style="display: flex; align-items: center; gap: 30px;">
+                <form action="/update_profile_pic" method="POST" enctype="multipart/form-data" style="margin: 0;">
+                    <div class="avatar-wrapper">
+                        {% if session.profile_pic and session.profile_pic != 'default.png' %}
+                            <img src="{{ url_for('static', filename='profiles/' + session.profile_pic) }}" alt="Profile">
+                        {% else %}
+                            <div style="background: url('https://api.dicebear.com/7.x/avataaars/svg?seed={{ session.user }}&backgroundColor=3b82f6') center/cover;"></div>
+                        {% endif %}
+                        <div class="avatar-overlay">UPDATE</div>
+                        <input type="file" name="profile_pic" accept="image/*" style="position: absolute; inset: 0; opacity: 0; cursor: pointer; z-index: 2;" onchange="this.form.submit()" title="Update Profile Picture">
+                    </div>
+                </form>
+                <div>
+                    <p style="color: var(--accent2); font-size: 0.9rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px;">ID: {{ stats.id }}</p>
+                    <h1 style="font-family: 'Syne', sans-serif; font-size: 2.5rem; color: var(--white); margin-bottom: 12px;">{{ stats.name }}</h1>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- OVERALL ATTENDANCE RING -->
+            <div class="panel">
+                <div class="panel-title">🎯 Overall Progress</div>
+                <div class="ring-container">
+                    <div class="progress-ring">
+                        <svg viewBox="0 0 200 200">
+                            <circle class="ring-bg" cx="100" cy="100" r="80"></circle>
+                            <circle class="ring-fill" cx="100" cy="100" r="80"></circle>
+                        </svg>
+                        <div class="ring-text">
+                            <h2>{{ stats.overall_attendance }}%</h2>
+                            <span>Attendance</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-row">
+                        <div class="stat-mini">
+                            <h3>{{ stats.total_lectures }}</h3>
+                            <p>Total Classes</p>
+                        </div>
+                        <div class="stat-mini">
+                            <h3 style="color: var(--accent2);">{{ stats.attended_lectures }}</h3>
+                            <p>Attended</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUBJECT RADAR CHART -->
+            <div class="panel">
+                <div class="panel-title">📊 Subject Breakdown</div>
+                <div class="chart-container">
+                    <canvas id="radarChart"></canvas>
+                </div>
+                
+                <div style="margin-top: 24px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 24px;">
+                    <div style="font-size: 0.85rem; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.1em;">Detailed Breakdown</div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        {% for i in range(stats.subjects.labels | length) %}
+                        {% if stats.subjects.labels[i] != "No Data" %}
+                        <div style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 10px 16px; border-radius: 8px;">
+                            <span style="font-weight: 600;">{{ stats.subjects.labels[i] }}</span>
+                            <span style="color: var(--accent2);">{{ stats.subjects.data[i] }}%</span>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- RECENT LECTURES TERMINAL -->
+            <div class="panel">
+                <div class="panel-title">📡 Recent Scans Log</div>
+                <div class="feed-list">
+                    {% if stats.recent %}
+                        {% for item in stats.recent %}
+                        <div class="feed-item">
+                            <div class="feed-info">
+                                <span class="feed-date">{{ item.date }}</span>
+                                <span class="feed-subject">{{ item.subject }}</span>
+                            </div>
+                            {% if item.status == 'Present' %}
+                            <span class="feed-status status-present">✓ Present</span>
+                            {% else %}
+                            <span class="feed-status status-absent">✗ Absent</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="text-align:center; padding: 20px; color: var(--muted); font-size: 0.8rem;">
+                            No attendance records found yet.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+
+    <footer style="text-align: center; padding: 40px 24px; font-size: 0.75rem; color: var(--muted); position: relative; z-index: 1;">
+        © 2025 JunoVision | Created by Jatin Jain, Rohan Singh, Chahat Jain<br>
+        <span style="font-style: italic; opacity: 0.8; margin-top: 8px; display: inline-block;">JunoVision — Empowering Attendance through Vision.</span>
+    </footer>
+
+    <script>
+        // Initialize Chart.js Radar Chart
+        const ctx = document.getElementById('radarChart').getContext('2d');
+        
+        // Pass data from Flask
+        const labels = {{ stats.subjects.labels | tojson }};
+        const data = {{ stats.subjects.data | tojson }};
+
+        Chart.defaults.color = '#6b7a99';
+        Chart.defaults.font.family = "'DM Mono', monospace";
+
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Attendance %',
+                    data: data,
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    borderColor: '#3b82f6',
+                    pointBackgroundColor: '#06d6a0',
+                    pointBorderColor: '#ffffff',
+                    pointHoverBackgroundColor: '#ffffff',
+                    pointHoverBorderColor: '#06d6a0',
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(255, 255, 255, 0.05)' },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        pointLabels: {
+                            color: '#e8f0ff',
+                            font: { size: 11, family: "'DM Mono', monospace" }
+                        },
+                        ticks: {
+                            display: false,
+                            min: 0,
+                            max: 100,
+                            stepSize: 20
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(8, 12, 20, 0.9)',
+                        titleColor: '#06d6a0',
+                        bodyColor: '#ffffff',
+                        borderColor: 'rgba(59, 130, 246, 0.3)',
+                        borderWidth: 1,
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return context.raw + '% Attended';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // --- 3D PARTICLE NETWORK (THREE.JS) ---
+        const canvas = document.getElementById('bg-canvas');
+        if (canvas) {
+            const scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x080c14, 0.015);
+
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 40;
+
+            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 600;
+            const posArray = new Float32Array(particlesCount * 3);
+
+            for (let i = 0; i < particlesCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 120;
+            }
+
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const material = new THREE.PointsMaterial({
+                size: 0.25,
+                color: 0x3b82f6,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+
+            const particlesMesh = new THREE.Points(particlesGeometry, material);
+            scene.add(particlesMesh);
+
+            let mouseX = 0;
+            let mouseY = 0;
+            let targetX = 0;
+            let targetY = 0;
+            const windowHalfX = window.innerWidth / 2;
+            const windowHalfY = window.innerHeight / 2;
+
+            document.addEventListener('mousemove', (event) => {
+                mouseX = (event.clientX - windowHalfX) * 0.05;
+                mouseY = (event.clientY - windowHalfY) * 0.05;
+            });
+
+            const clock = new THREE.Clock();
+
+            function animate() {
+                requestAnimationFrame(animate);
+                targetX = mouseX * 0.001;
+                targetY = mouseY * 0.001;
+
+                particlesMesh.rotation.y += 0.002;
+                particlesMesh.rotation.x += 0.001;
+                particlesMesh.rotation.y += 0.05 * (targetX - particlesMesh.rotation.y);
+                particlesMesh.rotation.x += 0.05 * (targetY - particlesMesh.rotation.x);
+
+                renderer.render(scene, camera);
+            }
+
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+
+        // --- ORB FOLLOWER ---
+        const orb = document.getElementById('mouse-orb');
+        document.addEventListener('mousemove', (e) => {
+            orb.style.left = e.clientX + 'px';
+            orb.style.top = e.clientY + 'px';
+        });
+
+        // --- THEME TOGGLE & CHART UPDATE ---
+        const themeToggle = document.getElementById('themeToggle');
+        const sunIcon = document.getElementById('sunIcon');
+        const moonIcon = document.getElementById('moonIcon');
+
+        function updateTheme(isLight) {
+            if (isLight) {
+                document.documentElement.setAttribute('data-theme', 'light');
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+                localStorage.setItem('theme', 'light');
+                
+                // Update chart for light mode
+                Chart.defaults.color = '#64748b';
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+                localStorage.setItem('theme', 'dark');
+
+                // Update chart for dark mode
+                Chart.defaults.color = '#6b7a99';
+            }
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const isLight = document.documentElement.getAttribute('data-theme') !== 'light';
+            updateTheme(isLight);
+        });
+
+        // Persist Theme
+        if (localStorage.getItem('theme') === 'light') {
+            updateTheme(true);
+        }
+
+        // --- 3D TILT EFFECT ---
+        const tiltElements = document.querySelectorAll('.panel');
+        tiltElements.forEach(el => {
+            el.addEventListener('mousemove', e => {
+                const rect = el.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+
+                const rotateX = ((y - centerY) / centerY) * -4;
+                const rotateY = ((x - centerX) / centerX) * 4;
+
+                el.style.transform = `perspective(1200px) scale(1.01) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+                el.style.transition = 'transform 0.1s ease-out';
+            });
+
+            el.addEventListener('mouseleave', () => {
+                el.style.transform = 'perspective(1200px) scale(1) rotateX(0deg) rotateY(0deg)';
+                el.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+            });
+        });
+
+
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+              console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            }, err => {
+              console.log('ServiceWorker registration failed: ', err);
+            });
+        });
+      }
+    </script>
+</body>
+</html>

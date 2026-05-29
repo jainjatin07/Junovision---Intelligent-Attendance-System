@@ -5,3 +5,5 @@ opencv-python==4.7.0.72
 pandas==2.2.3
 dlib==19.22.99
 numpy==1.24.4
+requests==2.31.0
+gunicorn==21.2.0

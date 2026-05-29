@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JunoVision — Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        :root {
+            --bg: #080c14;
+            --surface: #0d1320;
+            --card: #111927;
+            --border: rgba(99, 179, 255, 0.12);
+            --accent: #3b82f6;
+            --accent2: #06d6a0;
+            --text: #e8f0ff;
+            --muted: #6b7a99;
+            --danger: #f43f5e;
+            --white: #ffffff;
+        }
+
+        :root[data-theme="light"] {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --card: #ffffff;
+            --border: rgba(59, 130, 246, 0.2);
+            --accent: #2563eb;
+            --accent2: #059669;
+            --text: #0f172a;
+            --muted: #64748b;
+            --white: #0f172a;
+        }
+
+        :root[data-theme="light"] body::before {
+            background-image: linear-gradient(rgba(37, 99, 235, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(37, 99, 235, 0.08) 1px, transparent 1px);
+        }
+
+        :root[data-theme="light"] #bg-canvas {
+            opacity: 0.3; filter: invert(1);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* ── GRID BACKGROUND ── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(59, 130, 246, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.04) 1px, transparent 1px);
+            background-size: 48px 48px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        #bg-canvas {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;
+        }
+
+        #mouse-orb {
+            position: fixed; width: 400px; height: 400px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 60%);
+            pointer-events: none; z-index: 99; transform: translate(-50%, -50%);
+            mix-blend-mode: screen; will-change: left, top;
+        }
+
+        :root[data-theme="light"] #mouse-orb {
+            mix-blend-mode: multiply; background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 60%);
+        }
+
+        .glow-center {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px; height: 800px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        :root[data-theme="light"] .glow-center {
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 60%);
+        }
+
+        .theme-btn {
+            position: absolute; top: 24px; right: 24px;
+            background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
+            color: var(--text); width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.3s ease; z-index: 100;
+        }
+        .theme-btn:hover { background: rgba(255, 255, 255, 0.1); transform: scale(1.1); }
+
+        .login-card {
+            background: rgba(17, 25, 39, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 48px;
+            width: 100%;
+            max-width: 440px;
+            position: relative;
+            z-index: 10;
+            animation: popIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+            box-shadow: 0 32px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.05) inset;
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.95) translateY(20px); filter: blur(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        .logo {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 2rem;
+            color: var(--white);
+            text-align: center;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .logo .dot {
+            width: 12px; height: 12px;
+            background: var(--accent2);
+            border-radius: 50%;
+            box-shadow: 0 0 16px var(--accent2);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .sub-text {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 40px;
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .input-group input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            font-family: 'DM Mono', monospace;
+            color: var(--white);
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus {
+            border-color: var(--accent);
+            background: rgba(59, 130, 246, 0.05);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+        }
+
+        .role-toggle {
+            display: flex;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 24px;
+        }
+
+        .role-toggle label {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            font-size: 0.8rem;
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            color: var(--muted);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .role-toggle input {
+            display: none;
+        }
+
+        .role-toggle input:checked + label {
+            background: var(--accent);
+            color: var(--white);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: var(--accent);
+            color: var(--white);
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .btn-submit::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+        }
+
+        .btn-submit:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(59, 130, 246, 0.4);
+        }
+
+        .error-msg {
+            background: rgba(244, 63, 94, 0.1);
+            border: 1px solid rgba(244, 63, 94, 0.3);
+            color: #fb7185;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .demo-creds {
+            margin-top: 32px;
+            text-align: center;
+            font-size: 0.7rem;
+            color: var(--muted);
+            padding: 12px;
+            border: 1px dashed rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+
+        /* Intro Screen CSS */
+        #intro-screen {
+            position: fixed; inset: 0; z-index: 9999;
+            background: #080c14; display: flex; align-items: center; justify-content: center;
+            flex-direction: column; transition: all 1s ease-in-out;
+        }
+        .intro-text {
+            font-family: 'Syne', sans-serif; font-size: 2.5rem; font-weight: 800;
+            color: #fff; text-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+            opacity: 0; transform: scale(0.9);
+            transition: all 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+            text-align: center; padding: 20px;
+        }
+        .intro-text.visible {
+            opacity: 1; transform: scale(1); letter-spacing: 2px;
+        }
+    </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0a0a0f">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+</head>
+<body>
+    <div id="intro-screen" style="cursor: pointer;">
+        <div id="intro-text-0" class="intro-text visible" style="font-size: 1.2rem; letter-spacing: 4px; animation: pulse 2s infinite; color: var(--muted);">[ CLICK ANYWHERE TO INITIALIZE ]</div>
+        <div id="intro-text-1" class="intro-text" style="display: none;">WELCOME TO JUNOVISION</div>
+        <div id="intro-text-2" class="intro-text" style="display: none;">DEVELOPED BY JATIN, ROHAN, CHAHAT</div>
+    </div>
+
+    <div id="mouse-orb"></div>
+    <canvas id="bg-canvas"></canvas>
+    <div class="glow-center"></div>
+
+    <button id="themeToggle" class="theme-btn">
+        <svg id="sunIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg id="moonIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+    </button>
+
+    <div class="login-card">
+        <div class="logo">
+            <div class="dot"></div>
+            JunoVision
+        </div>
+        <div class="sub-text">Universal Authentication Portal</div>
+
+        {% if error %}
+        <div class="error-msg">⚠️ {{ error }}</div>
+        {% endif %}
+
+        <form action="/login" method="POST">
+            <div class="role-toggle">
+                <input type="radio" id="role_student" name="role" value="student" checked>
+                <label for="role_student">Student</label>
+                
+                <input type="radio" id="role_faculty" name="role" value="faculty">
+                <label for="role_faculty">Faculty</label>
+            </div>
+
+            <!-- Login Method Toggle -->
+            <div class="role-toggle" style="margin-bottom: 20px;">
+                <input type="radio" id="method_username" name="login_method" value="username" checked onchange="toggleLoginMethod()">
+                <label for="method_username">Username</label>
+                
+                <input type="radio" id="method_phone" name="login_method" value="phone" onchange="toggleLoginMethod()">
+                <label for="method_phone">Phone & OTP</label>
+            </div>
+
+            <!-- Username Fields -->
+            <div id="username-fields">
+                <div class="input-group">
+                    <label>ID / Username</label>
+                    <input type="text" id="username" name="username" required autocomplete="off" placeholder="Enter username">
+                </div>
+                
+                <div class="input-group" style="position: relative;">
+                    <label>Security Key / Password</label>
+                    <input type="password" id="password" name="password" required placeholder="••••••••" style="padding-right: 50px;">
+                    <span class="password-toggle" onclick="togglePassword('password', this)" style="position: absolute; right: 16px; top: 34px; cursor: pointer; font-size: 1.2rem; user-select: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">🙈</span>
+                    <div style="text-align: right; margin-top: 8px;">
+                        <a href="#" onclick="alert('Contact support Jatin Jain with a phone number of +917466804158 and a email of jainjatin386@gmail.com'); return false;" style="font-size: 0.75rem; color: var(--muted); text-decoration: none; transition: color 0.3s ease;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">Forgot Password?</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phone Fields -->
+            <div id="phone-fields" style="display: none;">
+                <div class="input-group" style="position: relative;">
+                    <label>Phone Number</label>
+                    <input type="text" id="phone" name="phone" autocomplete="off" placeholder="e.g. +91 9876543210" style="padding-right: 120px;">
+                    <button type="button" onclick="sendOtp()" style="position: absolute; right: 8px; top: 32px; height: 38px; background: var(--accent); color: var(--white); border: none; border-radius: 8px; padding: 0 16px; font-family: 'Syne', sans-serif; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">Send OTP</button>
+                </div>
+                
+                <div class="input-group">
+                    <label>Enter OTP</label>
+                    <input type="text" id="otp" name="otp" autocomplete="off" placeholder="6-digit OTP">
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit">Initialize Session</button>
+        </form>
+
+        <div style="text-align: center; margin-top: 24px; font-size: 0.85rem; color: var(--muted);">
+            Don't have an account? <a href="/signup" style="color: var(--accent); text-decoration: none; font-weight: 600;">Sign Up Here</a>
+        </div>
+    </div>
+    
+    <footer style="position: absolute; bottom: 0; width: 100%; text-align: center; padding: 20px; font-size: 0.75rem; color: var(--muted); z-index: 1;">
+        © 2025 JunoVision | Created by Jatin Jain, Rohan Singh, Chahat Jain<br>
+        <span style="font-style: italic; opacity: 0.8; margin-top: 8px; display: inline-block;">JunoVision — Empowering Attendance through Vision.</span>
+    </footer>
+
+    <script>
+        function toggleLoginMethod() {
+            const isPhone = document.getElementById('method_phone').checked;
+            const usernameFields = document.getElementById('username-fields');
+            const phoneFields = document.getElementById('phone-fields');
+            
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const phoneInput = document.getElementById('phone');
+            const otpInput = document.getElementById('otp');
+            
+            if (isPhone) {
+                usernameFields.style.display = 'none';
+                phoneFields.style.display = 'block';
+                usernameInput.required = false;
+                passwordInput.required = false;
+                phoneInput.required = true;
+                otpInput.required = true;
+            } else {
+                usernameFields.style.display = 'block';
+                phoneFields.style.display = 'none';
+                usernameInput.required = true;
+                passwordInput.required = true;
+                phoneInput.required = false;
+                otpInput.required = false;
+            }
+        }
+        
+        function sendOtp() {
+            const phone = document.getElementById('phone').value;
+            if (!phone) {
+                alert('Please enter a phone number first.');
+                return;
+            }
+            
+            // Clean phone for MSG91 (requires digits only with country code, e.g. 919876543210)
+            let cleanPhone = phone.replace(/\D/g, '');
+            if (cleanPhone.length === 10) {
+                cleanPhone = "91" + cleanPhone;
+            }
+            
+            // ALWAYS trigger backend fallback generation to print and cache a 6-digit sandbox OTP!
+            fallbackSendOtp(phone);
+            
+            // Configure MSG91 OTP Widget
+            var configuration = {
+              widgetId: "36654277734e353239383135",
+              tokenAuth: "520819TezOMDErmH6a18d090P1",
+              identifier: cleanPhone,
+              success: (data) => {
+                  console.log('success response', data);
+                  
+                  // Extract the JWT verified token string
+                  let token = "";
+                  if (data && typeof data === 'object') {
+                      token = data.token || data.message || JSON.stringify(data);
+                  } else {
+                      token = data;
+                  }
+                  
+                  // Fill the OTP input box with verified access-token
+                  const otpInput = document.getElementById('otp');
+                  if (otpInput) {
+                      otpInput.value = token;
+                      otpInput.style.borderColor = 'var(--accent2)';
+                      otpInput.style.background = 'rgba(6, 214, 160, 0.05)';
+                  }
+                  alert('OTP verified successfully via MSG91 Widget! You may now log in.');
+              },
+              failure: (error) => {
+                  console.log('failure reason', error);
+                  alert('OTP Widget Verification Error: ' + JSON.stringify(error));
+              }
+            };
+            
+            if (typeof window.initSendOTP === 'function') {
+                window.initSendOTP(configuration);
+            } else {
+                console.log("MSG91 OTP Widget script not loaded yet. Falling back to simulated Sandbox OTP.");
+                fallbackSendOtp(phone);
+            }
+        }
+        
+        function fallbackSendOtp(phone) {
+            fetch('/api/send_otp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ phone: phone })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.error) {
+                    alert(data.error);
+                } else {
+                    alert(data.message);
+                    if (data.sandbox_otp) {
+                        const otpInput = document.getElementById('otp');
+                        if (otpInput) {
+                            otpInput.value = data.sandbox_otp;
+                            otpInput.style.borderColor = 'var(--accent2)';
+                            otpInput.style.background = 'rgba(6, 214, 160, 0.05)';
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to send OTP.');
+            });
+        }
+
+        // --- Load MSG91 OTP Widget Script ---
+        (function loadOtpScript(urls) {
+            let i = 0;
+            function attempt() {
+                const s = document.createElement('script');
+                s.src = urls[i];
+                s.async = true;
+                s.onload = () => {
+                    console.log("MSG91 OTP Provider Script Loaded Successfully!");
+                };
+                s.onerror = () => {
+                    i++;
+                    if (i < urls.length) {
+                        attempt();
+                    }
+                };
+                document.head.appendChild(s);
+            }
+            attempt();
+        })([
+            'https://verify.msg91.com/otp-provider.js',
+            'https://verify.phone91.com/otp-provider.js'
+        ]);
+        
+        function togglePassword(inputId, iconElement) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                iconElement.textContent = '🐵';
+            } else {
+                input.type = 'password';
+                iconElement.textContent = '🙈';
+            }
+        }
+
+        // Initialize fields
+        toggleLoginMethod();
+
+        // --- 3D PARTICLE NETWORK (THREE.JS) ---
+        const canvas = document.getElementById('bg-canvas');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x080c14, 0.015);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 40;
+
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 600;
+        const posArray = new Float32Array(particlesCount * 3);
+
+        for (let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 120;
+        }
+
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const material = new THREE.PointsMaterial({
+            size: 0.25,
+            color: 0x3b82f6,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending
+        });
+
+        const particlesMesh = new THREE.Points(particlesGeometry, material);
+        scene.add(particlesMesh);
+
+        let mouseX = 0;
+        let mouseY = 0;
+        let targetX = 0;
+        let targetY = 0;
+        const windowHalfX = window.innerWidth / 2;
+        const windowHalfY = window.innerHeight / 2;
+
+        document.addEventListener('mousemove', (event) => {
+            mouseX = (event.clientX - windowHalfX) * 0.05;
+            mouseY = (event.clientY - windowHalfY) * 0.05;
+        });
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            targetX = mouseX * 0.001;
+            targetY = mouseY * 0.001;
+
+            particlesMesh.rotation.y += 0.002;
+            particlesMesh.rotation.x += 0.001;
+            particlesMesh.rotation.y += 0.05 * (targetX - particlesMesh.rotation.y);
+            particlesMesh.rotation.x += 0.05 * (targetY - particlesMesh.rotation.x);
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- ORB FOLLOWER ---
+        const orb = document.getElementById('mouse-orb');
+        document.addEventListener('mousemove', (e) => {
+            orb.style.left = e.clientX + 'px';
+            orb.style.top = e.clientY + 'px';
+        });
+
+        // --- THEME TOGGLE ---
+        const themeToggle = document.getElementById('themeToggle');
+        const sunIcon = document.getElementById('sunIcon');
+        const moonIcon = document.getElementById('moonIcon');
+
+        themeToggle.addEventListener('click', () => {
+            const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+            if (isLight) {
+                document.documentElement.removeAttribute('data-theme');
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+                localStorage.setItem('theme', 'light');
+            }
+        });
+
+        // Persist Theme
+        if (localStorage.getItem('theme') === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+            sunIcon.style.display = 'none';
+            moonIcon.style.display = 'block';
+        }
+
+        // --- INTRO SEQUENCE WITH TTS AUDIO ---
+        const introScreen = document.getElementById('intro-screen');
+        const text0 = document.getElementById('intro-text-0');
+        const text1 = document.getElementById('intro-text-1');
+        const text2 = document.getElementById('intro-text-2');
+
+        if (!sessionStorage.getItem('introPlayed')) {
+            introScreen.addEventListener('click', function startIntro() {
+                introScreen.removeEventListener('click', startIntro);
+                introScreen.style.cursor = 'default';
+                
+                text0.style.display = 'none';
+                
+                // Play Professional Indian Accent TTS Voice
+                if ('speechSynthesis' in window) {
+                    const msg = new SpeechSynthesisUtterance("Welcome to Juno Vision");
+                    msg.pitch = 1.0; // Normal human pitch
+                    msg.rate = 0.95; // Slightly slower for clarity and professionalism
+                    msg.volume = 1;
+                    
+                    // Try to set Indian English voice if available
+                    const voices = window.speechSynthesis.getVoices();
+                    const indianVoice = voices.find(v => v.lang.includes('en-IN') || v.name.includes('India'));
+                    
+                    if (indianVoice) {
+                        msg.voice = indianVoice;
+                    } else {
+                        // Fallback to any English voice
+                        const engVoice = voices.find(v => v.lang.includes('en'));
+                        if (engVoice) msg.voice = engVoice;
+                    }
+
+                    window.speechSynthesis.speak(msg);
+                }
+
+                // Animation Sequence
+                text1.style.display = 'block';
+                setTimeout(() => text1.classList.add('visible'), 50);
+                
+                setTimeout(() => {
+                    text1.classList.remove('visible');
+                    setTimeout(() => {
+                        text1.style.display = 'none';
+                        text2.style.display = 'block';
+                        setTimeout(() => text2.classList.add('visible'), 50);
+                    }, 1500);
+                }, 3000);
+
+                setTimeout(() => {
+                    text2.classList.remove('visible');
+                    setTimeout(() => {
+                        introScreen.style.opacity = '0';
+                        introScreen.style.pointerEvents = 'none';
+                        sessionStorage.setItem('introPlayed', 'true');
+                        setTimeout(() => introScreen.remove(), 1000);
+                    }, 1500);
+                }, 6500);
+            });
+        } else {
+            introScreen.style.display = 'none';
+            introScreen.remove();
+        }
+
+        // --- 3D TILT EFFECT ---
+        const card = document.querySelector('.login-card');
+        if (card) {
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const rotateX = ((y - centerY) / centerY) * -4;
+                const rotateY = ((x - centerX) / centerX) * 4;
+
+                card.style.transform = `perspective(1000px) scale(1.02) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+                card.style.transition = 'transform 0.1s ease-out';
+            });
+
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'perspective(1000px) scale(1) rotateX(0deg) rotateY(0deg)';
+                card.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+            });
+        }
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+              console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            }, err => {
+              console.log('ServiceWorker registration failed: ', err);
+            });
+        });
+      }
+
+      // --- PLAY ERROR SOUND IF LOGIN FAILS ---
+      document.addEventListener("DOMContentLoaded", () => {
+          const errorMsg = document.querySelector('.error-msg');
+          if (errorMsg) {
+              playErrorSound();
+              
+              // Add a quick shake animation to the card for extra effect
+              const card = document.querySelector('.login-card');
+              if (card) {
+                  card.style.animation = 'shake 0.4s cubic-bezier(.36,.07,.19,.97) both';
+              }
+          }
+      });
+
+      function playErrorSound() {
+          try {
+              // Plays a custom MP3 file
+              const audio = new Audio("{{ url_for('static', filename='audio/error.mp3') }}");
+              audio.volume = 0.5; // Adjust volume as needed
+              audio.play().catch(e => console.warn("Audio play blocked by browser", e));
+          } catch (e) {
+              console.warn("Audio play failed", e);
+          }
+      }
+    </script>
+</body>
+</html>

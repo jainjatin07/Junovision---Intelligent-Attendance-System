@@ -1,0 +1,28 @@
+# Virtual environment
+venv/
+ENV/
+env/
+.env
+
+# Python caching
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local database
+*.db
+*.sqlite3
+
+# Uploads and temporary data
+uploads/*
+!uploads/.gitkeep
+
+# Local attendance reports
+attendance/*.csv
+!attendance/.gitkeep
+
+# PyWhatKit database log
+PyWhatKit_DB.txt
+
+# VS Code directory
+.vscode/

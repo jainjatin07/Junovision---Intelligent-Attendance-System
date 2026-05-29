@@ -4,10 +4,11 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FaceAttend — Smart Classroom Attendance</title>
+    <title>JunoVision — Smart Classroom Attendance</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap"
         rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         :root {
             --bg: #080c14;
@@ -21,6 +22,41 @@
             --muted: #6b7a99;
             --danger: #f43f5e;
             --white: #ffffff;
+        }
+
+        :root[data-theme="light"] {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --card: #ffffff;
+            --border: rgba(59, 130, 246, 0.2);
+            --accent: #2563eb;
+            --accent2: #059669;
+            --accent-glow: rgba(37, 99, 235, 0.2);
+            --text: #0f172a;
+            --muted: #64748b;
+            --white: #0f172a;
+        }
+
+        :root[data-theme="light"] .glow-top {
+            background: radial-gradient(ellipse, rgba(37, 99, 235, 0.15) 0%, transparent 70%);
+        }
+
+        :root[data-theme="light"] .glow-bottom {
+            background: radial-gradient(ellipse, rgba(5, 150, 105, 0.1) 0%, transparent 70%);
+        }
+
+        :root[data-theme="light"] nav {
+            background: rgba(255, 255, 255, 0.7);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        :root[data-theme="light"] body::before {
+            background-image: linear-gradient(rgba(37, 99, 235, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(37, 99, 235, 0.08) 1px, transparent 1px);
+        }
+
+        :root[data-theme="light"] #bg-canvas {
+            opacity: 0.3;
+            filter: invert(1);
         }
 
         *,
@@ -37,6 +73,16 @@
             font-family: 'DM Mono', monospace;
             min-height: 100vh;
             overflow-x: hidden;
+        }
+
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
         }
 
         /* ── GRID BACKGROUND ── */
@@ -254,7 +300,49 @@
             left: 0;
             right: 0;
             height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.5), transparent);
+            background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.8), transparent);
+            box-shadow: 0 0 12px var(--accent);
+        }
+
+        .card-scanline {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, transparent 50%, rgba(59, 130, 246, 0.04) 51%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .card-scanner {
+            position: absolute;
+            top: -100%;
+            left: 0;
+            right: 0;
+            height: 20%;
+            background: linear-gradient(to bottom, transparent, rgba(6, 214, 160, 0.15), transparent);
+            animation: scan 3s linear infinite;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        @keyframes scan {
+            0% {
+                top: -20%;
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: 1;
+            }
+
+            100% {
+                top: 100%;
+                opacity: 0;
+            }
         }
 
         /* ── DROP ZONE ── */
@@ -438,12 +526,13 @@
         }
 
         .spinner {
-            width: 18px;
-            height: 18px;
-            border: 2px solid rgba(59, 130, 246, 0.2);
-            border-top-color: var(--accent);
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+            background: conic-gradient(transparent 40%, var(--accent) 100%);
+            mask-image: radial-gradient(transparent 55%, black 56%);
+            -webkit-mask-image: radial-gradient(transparent 55%, black 56%);
+            animation: spin 1s linear infinite;
         }
 
         @keyframes spin {
@@ -662,10 +751,134 @@
             background: rgba(59, 130, 246, 0.2);
             border-radius: 3px;
         }
+
+        /* ── TUTORIAL PANEL ── */
+        .tutorial-panel {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 12px 32px;
+            margin-bottom: 40px;
+            backdrop-filter: blur(10px);
+            animation: visionIntro 1.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .tut-step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0.3;
+            transition: all 0.5s ease;
+            font-size: 0.8rem;
+            color: var(--white);
+            font-weight: 600;
+        }
+
+        .tut-step.active {
+            opacity: 1;
+            transform: scale(1.05);
+            text-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
+        }
+
+        .tut-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(59, 130, 246, 0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            transition: all 0.5s ease;
+        }
+
+        .tut-step.active .tut-icon {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 0 16px var(--accent);
+            border-color: var(--accent);
+        }
+
+        .tut-divider {
+            flex-grow: 1;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.05);
+            margin: 0 20px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 2px;
+        }
+
+        .tut-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 0%;
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        /* Typewriter Cursor */
+        .blink-cursor {
+            animation: cursorBlink 1s step-end infinite;
+        }
+
+        @keyframes cursorBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        #mouse-orb {
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 99;
+            transform: translate(-50%, -50%);
+            mix-blend-mode: screen;
+            will-change: left, top;
+        }
+
+        :root[data-theme="light"] #mouse-orb {
+            mix-blend-mode: multiply;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 60%);
+        }
+
+        .theme-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--white);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .theme-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.1);
+        }
     </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0a0a0f">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
 </head>
 
 <body>
+    <div id="mouse-orb"></div>
+    <canvas id="bg-canvas"></canvas>
     <div class="glow-top"></div>
     <div class="glow-bottom"></div>
 
@@ -673,22 +886,83 @@
     <nav>
         <div class="nav-logo">
             <div class="dot"></div>
-            FaceAttend
+            JunoVision Scanner
         </div>
-        <div class="nav-tag">AI · Classroom · v1.0</div>
+        <div style="display: flex; gap: 16px; align-items: center;">
+            <a href="/dashboard" style="color: var(--muted); font-size: 0.8rem; text-decoration: none; border: 1px solid var(--border); padding: 4px 12px; border-radius: 6px;">Dashboard</a>
+            <a href="/logout" style="color: #fb7185; font-size: 0.8rem; text-decoration: none; border: 1px solid rgba(244,63,94,0.3); padding: 4px 12px; border-radius: 6px; background: rgba(244,63,94,0.1);">Logout</a>
+            <div class="nav-tag">AI · Classroom · v1.0</div>
+            <button id="themeToggle" class="theme-btn">
+                <svg id="sunIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <svg id="moonIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" style="display:none;">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+            </button>
+        </div>
     </nav>
 
     <div class="wrapper">
         <!-- HERO -->
         <div class="hero">
-            <div class="hero-badge"><span></span> Powered by Face Recognition</div>
-            <h1>Smart <em>Attendance</em><br />Detection System</h1>
-            <p class="hero-sub">Upload a classroom photo and let AI instantly detect faces and mark attendance — zero
-                manual work.</p>
+            {% if class_info %}
+            <div style="display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-bottom: 24px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); padding: 12px 24px; border-radius: 12px; font-size: 0.8rem; color: var(--accent);">
+                <span><strong>Course:</strong> {{ class_info.course }}</span> • 
+                <span><strong>Sem:</strong> {{ class_info.semester }}</span> • 
+                <span><strong>Sec:</strong> {{ class_info.section }}</span> • 
+                <span><strong>Sub:</strong> {{ class_info.subject }}</span>
+            </div>
+            <br>
+            {% endif %}
+            
+            <div class="hero-badge"><span></span> Scanning Initialized</div>
+            <h1 style="position: relative;">
+                <span id="tw-title-ph" style="visibility: hidden;">Smart <em>Attendance</em><br />Detection System</span>
+                <span id="tw-title" style="position: absolute; top: 0; left: 0; right: 0; text-align: center;"></span>
+            </h1>
+            <p class="hero-sub" style="position: relative;">
+                <span id="tw-subtitle-ph" style="visibility: hidden;">Upload a classroom photo and let AI instantly detect faces and mark attendance — zero manual work.</span>
+                <span id="tw-subtitle" style="position: absolute; top: 0; left: 0; right: 0; text-align: center;"></span>
+            </p>
+        </div>
+
+        <!-- HOW IT WORKS TUTORIAL -->
+        <div class="tutorial-panel">
+            <div class="tut-step active" id="tut1">
+                <div class="tut-icon">📸</div>
+                <span>1. Capture</span>
+            </div>
+            <div class="tut-divider">
+                <div class="tut-progress"></div>
+            </div>
+            <div class="tut-step" id="tut2">
+                <div class="tut-icon">🧠</div>
+                <span>2. AI Scan</span>
+            </div>
+            <div class="tut-divider">
+                <div class="tut-progress"></div>
+            </div>
+            <div class="tut-step" id="tut3">
+                <div class="tut-icon">✅</div>
+                <span>3. Marked</span>
+            </div>
         </div>
 
         <!-- UPLOAD CARD -->
         <div class="card">
+            <div class="card-scanline"></div>
+            <div class="card-scanner"></div>
             <div class="drop-zone" id="dropZone">
                 <input type="file" id="imageInput" accept="image/*" />
                 <div class="upload-icon">📷</div>
@@ -706,7 +980,7 @@
                 <div class="preview-label">Selected — <span id="fname">image.jpg</span></div>
             </div>
 
-            <button class="btn-primary" id="submitBtn" onclick="uploadImage()" disabled>
+            <button class="btn-primary magnetic-btn" id="submitBtn" onclick="uploadImage()" disabled>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                     <circle cx="12" cy="12" r="10" />
                     <path d="M12 8v4l3 3" />
@@ -761,7 +1035,10 @@
         </div>
     </div>
 
-    <footer>© 2025 FaceAttend · Built with Flask + AI Face Recognition</footer>
+    <footer>
+        © 2026 JunoVision | Created by Jatin Jain, Rohan Singh, Chahat Jain<br>
+        <span style="font-style: italic; opacity: 0.8; margin-top: 8px; display: inline-block;">JunoVision — Empowering Attendance through Vision.</span>
+    </footer>
 
     <script>
         const dropZone = document.getElementById('dropZone');
@@ -884,6 +1161,219 @@
                 el.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
             });
         });
+
+        // --- 3D PARTICLE NETWORK (THREE.JS) ---
+        const canvas = document.getElementById('bg-canvas');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x080c14, 0.015);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 40;
+
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // Create Particles
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 800;
+        const posArray = new Float32Array(particlesCount * 3);
+
+        for (let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 120;
+        }
+
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const material = new THREE.PointsMaterial({
+            size: 0.25,
+            color: 0x3b82f6,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending
+        });
+
+        const particlesMesh = new THREE.Points(particlesGeometry, material);
+        scene.add(particlesMesh);
+
+        // Add subtle larger glowing particles
+        const material2 = new THREE.PointsMaterial({
+            size: 0.8,
+            color: 0x06d6a0,
+            transparent: true,
+            opacity: 0.4,
+            blending: THREE.AdditiveBlending
+        });
+        const particlesMesh2 = new THREE.Points(particlesGeometry, material2);
+        particlesMesh2.rotation.x = Math.PI * 0.5;
+        scene.add(particlesMesh2);
+
+        let mouseX = 0;
+        let mouseY = 0;
+        let targetX = 0;
+        let targetY = 0;
+        const windowHalfX = window.innerWidth / 2;
+        const windowHalfY = window.innerHeight / 2;
+
+        document.addEventListener('mousemove', (event) => {
+            mouseX = (event.clientX - windowHalfX) * 0.05;
+            mouseY = (event.clientY - windowHalfY) * 0.05;
+        });
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
+
+            targetX = mouseX * 0.001;
+            targetY = mouseY * 0.001;
+
+            particlesMesh.rotation.y += 0.002;
+            particlesMesh.rotation.x += 0.001;
+            particlesMesh.rotation.y += 0.05 * (targetX - particlesMesh.rotation.y);
+            particlesMesh.rotation.x += 0.05 * (targetY - particlesMesh.rotation.x);
+
+            particlesMesh2.rotation.y -= 0.001;
+            particlesMesh2.rotation.x -= 0.001;
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- THEME TOGGLE ---
+        const themeToggle = document.getElementById('themeToggle');
+        const sunIcon = document.getElementById('sunIcon');
+        const moonIcon = document.getElementById('moonIcon');
+
+        themeToggle.addEventListener('click', () => {
+            const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+            if (isLight) {
+                document.documentElement.removeAttribute('data-theme');
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            }
+        });
+
+        // --- ORB FOLLOWER ---
+        const orb = document.getElementById('mouse-orb');
+        document.addEventListener('mousemove', (e) => {
+            orb.style.left = e.clientX + 'px';
+            orb.style.top = e.clientY + 'px';
+        });
+
+        // --- TUTORIAL ANIMATION LOOP ---
+        const tutSteps = [document.getElementById('tut1'), document.getElementById('tut2'), document.getElementById('tut3')];
+        const tutProgress = document.querySelectorAll('.tut-progress');
+        let currentTut = 0;
+
+        setInterval(() => {
+            tutSteps.forEach(s => s.classList.remove('active'));
+            tutProgress.forEach(p => { p.style.transition = 'none'; p.style.width = '0%'; });
+
+            tutSteps[currentTut].classList.add('active');
+
+            if (currentTut < 2) {
+                setTimeout(() => {
+                    tutProgress[currentTut].style.transition = 'width 1.8s linear';
+                    tutProgress[currentTut].style.width = '100%';
+                }, 50);
+            }
+
+            currentTut = (currentTut + 1) % 3;
+        }, 2000);
+
+        // --- TYPEWRITER EFFECT ---
+        function typeWriterHTML(targetId, sourceId, speed = 30) {
+            return new Promise(resolve => {
+                const target = document.getElementById(targetId);
+                const source = document.getElementById(sourceId);
+                if (!target || !source) return resolve();
+                
+                const html = source.innerHTML.trim();
+                target.innerHTML = '';
+                
+                let i = 0;
+                let text = '';
+                let isTag = false;
+                
+                function type() {
+                    if (i < html.length) {
+                        let char = html.charAt(i);
+                        text += char;
+                        
+                        if (char === '<') isTag = true;
+                        if (char === '>') isTag = false;
+                        
+                        if (isTag) {
+                            i++;
+                            type(); 
+                        } else {
+                            target.innerHTML = text + '<span class="blink-cursor" style="color:var(--accent); margin-left:4px; font-family: \'DM Mono\', monospace;">_</span>';
+                            i++;
+                            const delay = speed + (Math.random() * 20 - 10);
+                            setTimeout(type, Math.max(10, delay));
+                        }
+                    } else {
+                        // Remove cursor from previous element if we want, but keeping it is fine.
+                        // Actually let's remove it when done typing unless it's the last element.
+                        target.innerHTML = text;
+                        resolve();
+                    }
+                }
+                
+                setTimeout(type, 100);
+            });
+        }
+
+        async function initTypewriter() {
+            await typeWriterHTML('tw-title', 'tw-title-ph', 40);
+            await typeWriterHTML('tw-subtitle', 'tw-subtitle-ph', 25);
+            // Keep cursor blinking on the last element
+            const sub = document.getElementById('tw-subtitle');
+            if (sub) sub.innerHTML += '<span class="blink-cursor" style="color:var(--accent); margin-left:4px; font-family: \'DM Mono\', monospace;">_</span>';
+        }
+        
+        // Start typing after a short delay (wait for intro animations)
+        setTimeout(initTypewriter, 600);
+
+        // --- MAGNETIC BUTTONS ---
+        const magBtns = document.querySelectorAll('.magnetic-btn');
+        magBtns.forEach(btn => {
+            btn.addEventListener('mousemove', (e) => {
+                const rect = btn.getBoundingClientRect();
+                const x = e.clientX - rect.left - rect.width / 2;
+                const y = e.clientY - rect.top - rect.height / 2;
+                if (!btn.disabled) {
+                    btn.style.transform = `translate(${x * 0.3}px, ${y * 0.3}px) scale(1.05)`;
+                }
+            });
+            btn.addEventListener('mouseleave', () => {
+                btn.style.transform = `translate(0px, 0px) scale(1)`;
+            });
+        });
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+              console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            }, err => {
+              console.log('ServiceWorker registration failed: ', err);
+            });
+        });
+      }
     </script>
 </body>
 

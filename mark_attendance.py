@@ -6,7 +6,7 @@ import os
 
 encoding_file = "encodings/encodings.pkl"
 
-def mark_attendance(image_path):
+def mark_attendance(image_path, course_info=None):
     try:
         import face_recognition
         import numpy as np
@@ -37,18 +37,19 @@ def mark_attendance(image_path):
         if len(encodings) == 0:
             print("No face detected")
             return [], "no_face.csv"
-
         present_students = []
 
         for encoding in encodings:
-            matches = face_recognition.compare_faces(known_encodings, encoding)
+            # Stricter tolerance for matching faces from the dataset
+            matches = face_recognition.compare_faces(known_encodings, encoding, tolerance=0.45)
             name = "Unknown"
 
             face_distances = face_recognition.face_distance(known_encodings, encoding)
-            best_match_index = np.argmin(face_distances)
+            if len(face_distances) > 0:
+                best_match_index = np.argmin(face_distances)
 
-            if matches[best_match_index]:
-                name = known_names[best_match_index]
+                if matches[best_match_index]:
+                    name = known_names[best_match_index]
 
             if name != "Unknown":
                 present_students.append(name)
@@ -60,11 +61,31 @@ def mark_attendance(image_path):
         file_name = f"attendance_{timestamp}.csv"
         file_path = os.path.join("attendance", file_name)
 
-        df = pd.DataFrame({
-            "Name": present_students,
-            "Date": datetime.now().strftime("%Y-%m-%d"),
-            "Time": datetime.now().strftime("%H:%M:%S")
-        })
+        num_students = max(len(present_students), 1)
+
+        target_date = course_info.get("Date") if course_info and course_info.get("Date") else datetime.now().strftime("%Y-%m-%d")
+        # Build CSV Data
+        csv_data = {
+            "Name": present_students if present_students else [""],
+            "Date": [target_date] * num_students,
+            "Time": [datetime.now().strftime("%H:%M:%S")] * num_students
+        }
+        
+        if course_info:
+            course_val = course_info.get("Course", "")
+            sem_val = course_info.get("Semester", "")
+            class_val = f"{course_val} - Sem {sem_val}" if course_val else ""
+
+            csv_data["Class"] = [class_val] * num_students
+            csv_data["Course"] = [course_val] * num_students
+            csv_data["Semester"] = [sem_val] * num_students
+            csv_data["Section"] = [course_info.get("Section", "")] * num_students
+            csv_data["Subject"] = [course_info.get("Subject", "")] * num_students
+
+        df = pd.DataFrame(csv_data)
+        
+        if len(present_students) == 0:
+            df = df.drop(index=0)
 
         df.to_csv(file_path, index=False)
 
