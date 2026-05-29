@@ -1,31 +1,14 @@
 # Use a slim Python base image
 FROM python:3.10-slim
 
-# Install system dependencies required for cmake, dlib, and OpenCV
+# Install system dependencies required for compiling dlib and running the app
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
     gfortran \
-    git \
-    wget \
-    curl \
-    graphicsmagick \
-    libgraphicsmagick1-dev \
-    libatlas-base-dev \
-    libavcodec-dev \
-    libavformat-dev \
-    libgtk2.0-dev \
-    libjpeg-dev \
+    libopenblas-dev \
     liblapack-dev \
-    libswscale-dev \
     pkg-config \
-    python3-dev \
-    python3-numpy \
-    libpng-dev \
-    libtiff-dev \
-    libjasper-dev \
-    libx11-dev \
-    libatlas-base-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
