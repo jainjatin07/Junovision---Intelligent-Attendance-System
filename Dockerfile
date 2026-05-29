@@ -1,7 +1,7 @@
 # Use a slim Python base image
 FROM python:3.10-slim
 
-# Install system dependencies required for compiling dlib and running the app
+# Install system dependencies required for compiling dlib and running opencv-python
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y \
     libopenblas-dev \
     liblapack-dev \
     pkg-config \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
